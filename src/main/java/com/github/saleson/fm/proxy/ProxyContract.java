@@ -1,13 +1,16 @@
 package com.github.saleson.fm.proxy;
 
+import com.github.saleson.fm.proxy.commons.AnnotationUtils;
 import com.github.saleson.fm.proxy.commons.Helper;
 import com.github.saleson.fm.proxy.commons.Util;
+import com.github.saleson.fm.proxy.exception.DuplicateException;
 import com.github.saleson.fm.proxy.handle.HandleGroup;
 import com.github.saleson.fm.proxy.handle.Handler;
-import com.github.saleson.fm.proxy.handle.ReturnHandler;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ArrayUtils;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -23,6 +26,7 @@ public interface ProxyContract {
     List<MethodProxyMetadata> parseAndValidatateProxyMetadata(Class<?> targetType);
 
 
+    @Slf4j
     public abstract class BaseProxyContract implements ProxyContract {
 
         @Override
@@ -49,9 +53,9 @@ public interface ProxyContract {
             HandleGroup handleGroup = targetType.getInterfaces().length == 1 ?
                     getHandleGroupOnClass(targetType.getInterfaces()[0]) : getHandleGroupOnClass(targetType);
 
-            ReturnHandler returnHandler = getReturnHandlerOnAnnotatedElement(method);
-            if (!Objects.isNull(returnHandler)) {
-                metadata.setReturnHandler(returnHandler);
+            HandleMetadata returnHandleMetadata = getReturnHandleMetadataOnAnnotatedElement(method);
+            if (!Objects.isNull(returnHandleMetadata)) {
+                metadata.setReturnHandlerMetadata(toReturnHandlerMetadata(returnHandleMetadata));
             }
 
             Collection<Handle> methodHandles = getHandlesOnAnnotatedElement(method);
@@ -64,15 +68,20 @@ public interface ProxyContract {
             }
 
             handles = Helper.sortHandles(handles);
-            List<Handler> handlers = handles.stream()
-                    .map(handle -> getHandlerInstance(handle.handler()))
+            List<HandlerMetadata<Annotation, Handler>> handlerMetadatas = handles.stream()
+                    .map(handle -> {
+                        return HandlerMetadata.<Annotation, Handler>builder()
+                                .annotation(handle)
+                                .handler(getHandlerInstance(handle.handler()))
+                                .build();
+                    })
                     .collect(Collectors.toList());
 
-            metadata.setHandlers(handlers);
+            metadata.setHandlerMetadatas(handlerMetadatas);
 
             if ((Objects.isNull(overType) || !ArrayUtils.contains(overType.types(), Return.class))
-                    && Objects.isNull(metadata.getReturnHandler()) && !Objects.isNull(handleGroup.getReturnHandle())) {
-                metadata.setReturnHandler(getHandlerInstance(handleGroup.getReturnHandle().handler()));
+                    && Objects.isNull(metadata.getReturnHandlerMetadata()) && !Objects.isNull(handleGroup.getReturnHandle())) {
+                metadata.setReturnHandlerMetadata(toReturnHandlerMetadata(handleGroup.getReturnHandle()));
             }
             return metadata;
         }
@@ -81,48 +90,48 @@ public interface ProxyContract {
         protected HandleGroup getHandleGroupOnClass(Class<?> cls) {
             HandleGroup handleGroup = new HandleGroup();
 
-            Return returnHandle = getReturnHandleOnAnnotatedElement(cls);
-            if (!Objects.isNull(returnHandle)) {
-                handleGroup.setReturnHandle(returnHandle);
+            HandleMetadata<Return> returnHandleMd = getReturnHandleMetadataOnAnnotatedElement(cls);
+            if (!Objects.isNull(returnHandleMd)) {
+                handleGroup.setReturnHandle(returnHandleMd);
             }
             handleGroup.setHandles(getHandlesOnAnnotatedElement(cls));
-
-//            ReturnHandler returnHandler = getReturnHandlerOnAnnotatedElement(cls);
-//            if (!Objects.isNull(returnHandler)) {
-//                handleGroup.setReturnHandler(returnHandler);
-//            }
-//            handleGroup.setHandlers(getHandlerOnAnnotatedElement(cls));
             return handleGroup;
         }
 
-
-        protected Return getReturnHandleOnAnnotatedElement(AnnotatedElement element) {
-            return AnnotatedElementUtils.findMergedAnnotation(element, Return.class);
-        }
 
         protected Collection<Handle> getHandlesOnAnnotatedElement(AnnotatedElement element) {
             return AnnotatedElementUtils.findMergedRepeatableAnnotations(element, Handle.class);
         }
 
 
-        protected ReturnHandler getReturnHandlerOnAnnotatedElement(AnnotatedElement element) {
-            Return classAnnotation = AnnotatedElementUtils.findMergedAnnotation(element, Return.class);
-            if (classAnnotation != null) {
-                return getHandlerInstance(classAnnotation.handler());
+        protected HandleMetadata<Return> getReturnHandleMetadataOnAnnotatedElement(AnnotatedElement element) {
+            List<AnnotationUtils.AnnotationTaggingMetadata<Return>> annotationTaggingMetadatas =
+                    AnnotationUtils.getAnnotationTaggingMetadatas(element, Return.class, false);
+            if(annotationTaggingMetadatas.size()>1){
+                throw new DuplicateException("Duplicate Return Handler");
             }
-            return null;
+            if(annotationTaggingMetadatas.size()==0){
+                return null;
+            }
+            return annotationTaggingMetadatas.stream().findFirst().map(atm ->{
+                return HandleMetadata.<Return>builder()
+                        .annotation(atm.getAnnotation())
+                        .handleAnnotation(atm.getTaggingAnnotation())
+                        .build();
+            }).get();
         }
 
-        protected List<Handler> getHandlerOnAnnotatedElement(AnnotatedElement element) {
-            Set<Handle> classAnnotations = AnnotatedElementUtils.findMergedRepeatableAnnotations(element, Handle.class);
-            List<Handle> handles = Helper.sortHandles(classAnnotations);
-            List<Handler> handlers = new ArrayList<>(handles.size());
-            for (Handle handle : handles) {
-                handlers.add(getHandlerInstance(handle.handler()));
-            }
-            return handlers;
+        protected HandlerMetadata toReturnHandlerMetadata(HandleMetadata<Return> handleMetadata){
+            return HandlerMetadata.builder().annotation(handleMetadata.getAnnotation())
+                    .handler(getHandlerInstance(handleMetadata.getHandleAnnotation().handler()))
+                    .build();
         }
 
+        protected HandlerMetadata toHandlerMetadata(HandleMetadata<Handle> handleMetadata){
+            return HandlerMetadata.builder().annotation(handleMetadata.getAnnotation())
+                    .handler(getHandlerInstance(handleMetadata.getHandleAnnotation().handler()))
+                    .build();
+        }
 
         protected abstract MethodKeyGenerator getMethodKeyGenerator();
 

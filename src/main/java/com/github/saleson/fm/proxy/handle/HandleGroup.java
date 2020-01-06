@@ -1,6 +1,7 @@
 package com.github.saleson.fm.proxy.handle;
 
 import com.github.saleson.fm.proxy.Handle;
+import com.github.saleson.fm.proxy.HandleMetadata;
 import com.github.saleson.fm.proxy.Return;
 import lombok.Data;
 
@@ -15,7 +16,7 @@ import java.util.Objects;
 @Data
 public class HandleGroup {
     private Collection<Handle> handles;
-    private Return returnHandle;
+    private HandleMetadata<Return> returnHandle;
 
 
     public int handerSize() {

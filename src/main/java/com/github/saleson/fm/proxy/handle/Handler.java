@@ -1,11 +1,13 @@
 package com.github.saleson.fm.proxy.handle;
 
+import java.lang.annotation.Annotation;
+
 /**
  * @author saleson
  * @date 2020-01-03 16:59
  */
-public interface Handler {
+public interface Handler<A extends Annotation> extends IHandler {
 
-    void handle(HandleArg arg);
+    void handle(A annotation, HandleArg arg);
 
 }

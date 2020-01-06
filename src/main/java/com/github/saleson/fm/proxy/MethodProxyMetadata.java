@@ -4,6 +4,7 @@ import com.github.saleson.fm.proxy.handle.Handler;
 import com.github.saleson.fm.proxy.handle.ReturnHandler;
 import lombok.Data;
 
+import java.lang.annotation.Annotation;
 import java.util.List;
 
 /**
@@ -15,8 +16,8 @@ public class MethodProxyMetadata {
 
     private String methodKey;
 
-    private List<Handler> handlers;
+    private List<HandlerMetadata<Annotation, Handler>> handlerMetadatas;
 
-    private ReturnHandler returnHandler;
+    private HandlerMetadata<Annotation, ReturnHandler> returnHandlerMetadata;
 
 }

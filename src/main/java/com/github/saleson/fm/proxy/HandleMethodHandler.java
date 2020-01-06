@@ -3,8 +3,10 @@ package com.github.saleson.fm.proxy;
 import com.github.saleson.fm.proxy.handle.HandleArg;
 import com.github.saleson.fm.proxy.handle.HandleContext;
 import com.github.saleson.fm.proxy.handle.Handler;
+import com.github.saleson.fm.proxy.handle.ReturnHandler;
 import lombok.Getter;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.Objects;
 
@@ -31,7 +33,7 @@ public class HandleMethodHandler implements MethodHandler {
     }
 
 
-    protected HandleArg createHandleArg(HandleContext handleContext, Object[] args){
+    protected HandleArg createHandleArg(HandleContext handleContext, Object[] args) {
         HandleArg handleArg = new HandleArg();
         handleArg.setArgs(args);
         handleArg.setHandleCxt(handleContext);
@@ -40,15 +42,16 @@ public class HandleMethodHandler implements MethodHandler {
     }
 
 
-    protected Object handle(HandleArg handleArg){
-        for (Handler handler : methodProxyMetadata.getHandlers()) {
-            handler.handle(handleArg);
+    protected Object handle(HandleArg handleArg) {
+        for (HandlerMetadata<Annotation, Handler> handleMetadata : methodProxyMetadata.getHandlerMetadatas()) {
+            handleMetadata.getHandler().handle(handleMetadata.getAnnotation(), handleArg);
         }
-        if(Objects.isNull(methodProxyMetadata.getReturnHandler())){
+        HandlerMetadata<Annotation, ReturnHandler> reuturnHandleMetadata = methodProxyMetadata.getReturnHandlerMetadata();
+        if (Objects.isNull(reuturnHandleMetadata)) {
             return null;
         }
 
-        return methodProxyMetadata.getReturnHandler().apply(handleArg);
+        return reuturnHandleMetadata.getHandler().apply(reuturnHandleMetadata.getAnnotation(), handleArg);
     }
 
 }
