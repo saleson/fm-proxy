@@ -30,13 +30,19 @@ public class AnnotationUtils {
     }
 
 
+
     public static <A extends Annotation> List<AnnotationTaggingMetadata<A>> getAnnotationTaggingMetadatas
-            (AnnotatedElement element, Class<A> taggingAnnoCls, boolean repeatable) {
+            (AnnotatedElement element, Class<A> taggingAnnoCls, boolean searchChild, boolean repeatable) {
         Annotation[] annotations = org.springframework.core.annotation.AnnotationUtils.getAnnotations(element);
         List<AnnotationTaggingMetadata<A>> annotationTaggingMetadatas = new ArrayList<>(annotations.length);
         for (Annotation annotation : annotations) {
-
-            if(repeatable){
+            if(searchChild && Objects.equals(annotation.annotationType(), taggingAnnoCls)){
+                AnnotationTaggingMetadata annotationTaggingMetadata = AnnotationTaggingMetadata.builder()
+                        .annotation(annotation)
+                        .taggingAnnotation(annotation)
+                        .build();
+                annotationTaggingMetadatas.add(annotationTaggingMetadata);
+            }else if(repeatable){
                 annotationTaggingMetadatas.addAll(getRepeatableTaggingAnnotationMetadatas(annotation, taggingAnnoCls));
             }else{
                 A taggingAnno = AnnotatedElementUtils.getMergedAnnotation(annotation.annotationType(), taggingAnnoCls);

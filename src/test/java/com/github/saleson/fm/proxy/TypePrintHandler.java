@@ -12,7 +12,7 @@ import java.lang.annotation.Annotation;
 public class TypePrintHandler implements Handler {
 
     @Override
-    public void handle(Annotation annotation, HandleArg arg) {
+    public void handle(HandleArg arg) {
         System.out.println("=====print=====" + arg.getMethod().getDeclaringClass());
     }
 }

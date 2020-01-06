@@ -106,10 +106,12 @@ public interface ProxyContract {
 
         protected HandleMetadata<Return> getReturnHandleMetadataOnAnnotatedElement(AnnotatedElement element) {
             List<AnnotationUtils.AnnotationTaggingMetadata<Return>> annotationTaggingMetadatas =
-                    AnnotationUtils.getAnnotationTaggingMetadatas(element, Return.class, false);
+                    AnnotationUtils.getAnnotationTaggingMetadatas(element, Return.class, true,false);
             if(annotationTaggingMetadatas.size()>1){
                 throw new DuplicateException("Duplicate Return Handler");
             }
+
+
             if(annotationTaggingMetadatas.size()==0){
                 return null;
             }
