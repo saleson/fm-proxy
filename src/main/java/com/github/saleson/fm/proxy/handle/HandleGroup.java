@@ -15,7 +15,7 @@ import java.util.Objects;
  */
 @Data
 public class HandleGroup {
-    private Collection<Handle> handles;
+    private Collection<HandleMetadata<Handle>> handles;
     private HandleMetadata<Return> returnHandle;
 
 

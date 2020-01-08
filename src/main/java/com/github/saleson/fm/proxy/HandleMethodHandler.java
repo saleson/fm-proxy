@@ -44,7 +44,7 @@ public class HandleMethodHandler implements MethodHandler {
 
     protected Object handle(HandleArg handleArg) {
         for (HandlerMetadata<Annotation, Handler> handleMetadata : methodProxyMetadata.getHandlerMetadatas()) {
-            handleMetadata.getHandler().handle(handleArg);
+            handleMetadata.getHandler().handle(handleMetadata.getAnnotation(), handleArg);
         }
         HandlerMetadata<Annotation, ReturnHandler> reuturnHandleMetadata = methodProxyMetadata.getReturnHandlerMetadata();
         if (Objects.isNull(reuturnHandleMetadata)) {

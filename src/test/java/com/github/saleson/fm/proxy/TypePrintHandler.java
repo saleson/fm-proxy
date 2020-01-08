@@ -9,10 +9,10 @@ import java.lang.annotation.Annotation;
  * @author saleson
  * @date 2020-01-04 13:41
  */
-public class TypePrintHandler implements Handler {
+public class TypePrintHandler implements Handler<Handle> {
 
     @Override
-    public void handle(HandleArg arg) {
+    public void handle(Handle anno,HandleArg arg) {
         System.out.println("=====print=====" + arg.getMethod().getDeclaringClass());
     }
 }

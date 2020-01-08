@@ -9,11 +9,11 @@ import com.github.saleson.fm.proxy.handle.ReturnHandler;
  * @author saleson
  * @date 2020-01-03 19:49
  */
-public class TestHandler implements ReturnHandler<MapReturn, String>, Handler {
+public class TestHandler implements ReturnHandler<MapReturn, String>, Handler<Handle> {
 
 
     @Override
-    public void handle(HandleArg arg) {
+    public void handle(Handle annotation, HandleArg arg) {
         System.out.println("handle ... arg:" + arg);
     }
 

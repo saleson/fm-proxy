@@ -7,6 +7,7 @@ import com.github.saleson.fm.proxy.exception.DuplicateException;
 import com.github.saleson.fm.proxy.handle.HandleGroup;
 import com.github.saleson.fm.proxy.handle.Handler;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.collections.ListUtils;
 import org.apache.commons.lang3.ArrayUtils;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 
@@ -58,21 +59,21 @@ public interface ProxyContract {
                 metadata.setReturnHandlerMetadata(toReturnHandlerMetadata(returnHandleMetadata));
             }
 
-            Collection<Handle> methodHandles = getHandlesOnAnnotatedElement(method);
-            List<Handle> handles = new ArrayList<>(methodHandles);
+            Collection<HandleMetadata<Handle>> methodHandles = getHandleMetadatasOnAnnotatedElement(method);
+            List<HandleMetadata<Handle>> handleMetadatas = new ArrayList<>(methodHandles);
 
             OverType overType = AnnotatedElementUtils.findMergedAnnotation(method, OverType.class);
             if ((Objects.isNull(overType) || !ArrayUtils.contains(overType.types(), Handle.class))
                     && !Objects.isNull(handleGroup.getHandles())) {
-                handles.addAll(handleGroup.getHandles());
+                handleMetadatas.addAll(handleGroup.getHandles());
             }
 
-            handles = Helper.sortHandles(handles);
-            List<HandlerMetadata<Annotation, Handler>> handlerMetadatas = handles.stream()
-                    .map(handle -> {
+            handleMetadatas = Helper.sortHandleMetadatas(handleMetadatas);
+            List<HandlerMetadata<Annotation, Handler>> handlerMetadatas = handleMetadatas.stream()
+                    .map(hm -> {
                         return HandlerMetadata.<Annotation, Handler>builder()
-                                .annotation(handle)
-                                .handler(getHandlerInstance(handle.handler()))
+                                .annotation(hm.getAnnotation())
+                                .handler(getHandlerInstance(hm.getHandleAnnotation().handler()))
                                 .build();
                     })
                     .collect(Collectors.toList());
@@ -94,7 +95,7 @@ public interface ProxyContract {
             if (!Objects.isNull(returnHandleMd)) {
                 handleGroup.setReturnHandle(returnHandleMd);
             }
-            handleGroup.setHandles(getHandlesOnAnnotatedElement(cls));
+            handleGroup.setHandles(getHandleMetadatasOnAnnotatedElement(cls));
             return handleGroup;
         }
 
@@ -102,6 +103,46 @@ public interface ProxyContract {
         protected Collection<Handle> getHandlesOnAnnotatedElement(AnnotatedElement element) {
             return AnnotatedElementUtils.findMergedRepeatableAnnotations(element, Handle.class);
         }
+
+        protected List<HandleMetadata<Handle>> getHandleMetadatasOnAnnotatedElement(AnnotatedElement element) {
+            List<AnnotationUtils.AnnotationTaggingMetadata<Handle>> annotationTaggingMetadatas =
+                    AnnotationUtils.getAnnotationTaggingMetadatas(element, Handle.class, true,true);
+
+            List<HandleMetadata<Handle>> handleMetadataList = annotationTaggingMetadatas.stream().map(annoTaggingMetadata->{
+                int order = annoTaggingMetadata.getTaggingAnnotation().order();
+                if(!Objects.equals(annoTaggingMetadata.getAnnotation(), annoTaggingMetadata.getTaggingAnnotation())){
+                    Map<String, Object> annoAttrs =
+                            org.springframework.core.annotation.AnnotationUtils.getAnnotationAttributes(annoTaggingMetadata.getAnnotation());
+                    int annoOrder = (Integer)annoAttrs.getOrDefault("order", 0);
+                    order += annoOrder;
+                }
+
+                return HandleMetadata.<Handle>builder()
+                        .annotation(annoTaggingMetadata.getAnnotation())
+                        .handleAnnotation(annoTaggingMetadata.getTaggingAnnotation())
+                        .order(order)
+                        .build();
+
+            }).collect(Collectors.toList());
+
+            return ListUtils.union(handleMetadataList, getHandleMetadatasOnAnnotatedElementByHandles(element));
+        }
+
+        private List<HandleMetadata<Handle>> getHandleMetadatasOnAnnotatedElementByHandles(AnnotatedElement element){
+            Handles handlesAnno = element.getAnnotation(Handles.class);
+            if(Objects.isNull(handlesAnno)){
+                return ListUtils.EMPTY_LIST;
+            }
+
+            return Arrays.stream(handlesAnno.value()).map(handle -> {
+                return HandleMetadata.<Handle>builder()
+                        .annotation(handle)
+                        .handleAnnotation(handle)
+                        .order(handle.order())
+                        .build();
+            }).collect(Collectors.toList());
+        }
+
 
 
         protected HandleMetadata<Return> getReturnHandleMetadataOnAnnotatedElement(AnnotatedElement element) {

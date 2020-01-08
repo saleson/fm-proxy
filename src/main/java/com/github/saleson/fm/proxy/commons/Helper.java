@@ -1,7 +1,9 @@
 package com.github.saleson.fm.proxy.commons;
 
 import com.github.saleson.fm.proxy.Handle;
+import com.github.saleson.fm.proxy.HandleMetadata;
 
+import java.lang.annotation.Annotation;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -16,4 +18,8 @@ public class Helper {
         return handles.stream().sorted(Comparator.comparing(Handle::order)).collect(Collectors.toList());
     }
 
+
+    public static <A extends Annotation> List<HandleMetadata<A>> sortHandleMetadatas(Collection<HandleMetadata<A>> handles){
+        return handles.stream().sorted(Comparator.comparing(HandleMetadata::getOrder)).collect(Collectors.toList());
+    }
 }

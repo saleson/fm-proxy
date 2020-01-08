@@ -1,12 +1,13 @@
 package com.github.saleson.fm.proxy;
 
-import com.github.saleson.fm.proxy.handle.Handler;
-import com.github.saleson.fm.proxy.handle.IHandler;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import org.springframework.core.annotation.AnnotationUtils;
 
 import java.lang.annotation.Annotation;
+import java.util.Map;
+import java.util.Objects;
 
 /**
  * @author saleson
@@ -16,6 +17,7 @@ import java.lang.annotation.Annotation;
 @AllArgsConstructor
 @Builder
 public class HandleMetadata<A extends Annotation> {
+    private int order;
     private Annotation annotation;
     private A handleAnnotation;
 }
